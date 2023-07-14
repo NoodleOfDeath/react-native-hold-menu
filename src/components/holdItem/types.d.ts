@@ -1,6 +1,6 @@
 import { ViewStyle } from 'react-native';
 import { MenuItemProps } from '../menu/types';
-import { TransformOriginAnchorPosition } from '../../hooks/useCalculations';
+import { TransformOriginAnchorPosition } from '../../utils/calculations';
 
 export type HoldItemProps = {
   /**

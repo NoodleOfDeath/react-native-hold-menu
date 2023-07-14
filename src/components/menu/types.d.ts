@@ -1,4 +1,4 @@
-import { TransformOriginAnchorPosition } from '../../hooks/useCalculations';
+import { TransformOriginAnchorPosition } from '../../utils/calculations';
 
 export type MenuItemProps = {
   key: string;

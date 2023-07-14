@@ -12,7 +12,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { useCalculations } from '../../hooks/useCalculations';
+import {
+  calculateMenuHeight,
+  menuAnimationAnchor,
+} from '../../utils/calculations';
 import { BlurView } from 'expo-blur';
 
 import MenuItems from './MenuItems';
@@ -28,114 +31,92 @@ import styles from './styles';
 import { MenuItemProps } from './types';
 import { useInternal } from '../../hooks';
 import { deepEqual } from '../../utils/validations';
-import { useLeftOrRight } from './calculations';
+import { leftOrRight } from './calculations';
 
 const AnimatedView = Animated.createAnimatedComponent(BlurView);
 
 const MenuListComponent = () => {
   const { state, theme, menuProps } = useInternal();
-  const _leftPosition = useLeftOrRight(menuProps);
-  const { calculateMenuHeight, menuAnimationAnchor } = useCalculations();
 
   const [itemList, setItemList] = React.useState<MenuItemProps[]>([]);
 
-  const menuHeight = useDerivedValue(
-    React.useCallback(() => {
-      const itemsWithSeparator = menuProps.value.items.filter(
-        item => item.withSeparator
-      );
-      return calculateMenuHeight(
-        menuProps.value.items.length,
-        itemsWithSeparator.length
-      );
-    }, [calculateMenuHeight, menuProps.value.items]),
-    [menuProps]
-  );
+  const menuHeight = useDerivedValue(() => {
+    const itemsWithSeparator = menuProps.value.items.filter(
+      item => item.withSeparator
+    );
+    return calculateMenuHeight(
+      menuProps.value.items.length,
+      itemsWithSeparator.length
+    );
+  }, [menuProps]);
   const prevList = useSharedValue<MenuItemProps[]>([]);
 
-  const messageStyles = useAnimatedStyle(
-    React.useCallback(() => {
-      const itemsWithSeparator = menuProps.value.items.filter(
-        item => item.withSeparator
-      );
+  const messageStyles = useAnimatedStyle(() => {
+    const itemsWithSeparator = menuProps.value.items.filter(
+      item => item.withSeparator
+    );
 
-      const translate = menuAnimationAnchor(
-        menuProps.value.anchorPosition,
-        menuProps.value.itemWidth,
-        menuProps.value.items.length,
-        itemsWithSeparator.length
-      );
-
-      const menuScaleAnimation = () =>
-        state.value === CONTEXT_MENU_STATE.ACTIVE
-          ? withSpring(1, SPRING_CONFIGURATION_MENU)
-          : withTiming(0, {
-              duration: HOLD_ITEM_TRANSFORM_DURATION,
-            });
-
-      const opacityAnimation = () =>
-        withTiming(state.value === CONTEXT_MENU_STATE.ACTIVE ? 1 : 0, {
-          duration: HOLD_ITEM_TRANSFORM_DURATION,
-        });
-
-      return {
-        left: _leftPosition,
-        height: menuHeight.value,
-        opacity: opacityAnimation(),
-        transform: [
-          { translateX: translate.beginningTransformations.translateX },
-          { translateY: translate.beginningTransformations.translateY },
-          {
-            scale: menuScaleAnimation(),
-          },
-          { translateX: translate.endingTransformations.translateX },
-          { translateY: translate.endingTransformations.translateY },
-        ],
-      };
-    }, [
-      _leftPosition,
-      menuAnimationAnchor,
-      menuHeight.value,
+    const translate = menuAnimationAnchor(
       menuProps.value.anchorPosition,
       menuProps.value.itemWidth,
-      menuProps.value.items,
-      state.value,
-    ])
-  );
+      menuProps.value.items.length,
+      itemsWithSeparator.length
+    );
 
-  const animatedInnerContainerStyle = useAnimatedStyle(
-    React.useCallback(() => {
-      return {
-        backgroundColor:
-          theme.value === 'light'
-            ? IS_IOS
-              ? 'rgba(255, 255, 255, .75)'
-              : 'rgba(255, 255, 255, .95)'
-            : IS_IOS
-            ? 'rgba(0,0,0,0.5)'
-            : 'rgba(39, 39, 39, .8)',
-      };
-    }, [theme]),
-    [theme]
-  );
+    const _leftPosition = leftOrRight(menuProps);
 
-  const animatedProps = useAnimatedProps(
-    React.useCallback(() => {
-      return { tint: theme.value };
-    }, [theme]),
-    [theme]
-  );
+    const menuScaleAnimation = () =>
+      state.value === CONTEXT_MENU_STATE.ACTIVE
+        ? withSpring(1, SPRING_CONFIGURATION_MENU)
+        : withTiming(0, {
+            duration: HOLD_ITEM_TRANSFORM_DURATION,
+          });
 
-  const setter = React.useCallback(
-    (items: MenuItemProps[]) => {
-      setItemList(items);
-      prevList.value = items;
-    },
-    [prevList]
-  );
+    const opacityAnimation = () =>
+      withTiming(state.value === CONTEXT_MENU_STATE.ACTIVE ? 1 : 0, {
+        duration: HOLD_ITEM_TRANSFORM_DURATION,
+      });
+
+    return {
+      left: _leftPosition,
+      height: menuHeight.value,
+      opacity: opacityAnimation(),
+      transform: [
+        { translateX: translate.beginningTransformations.translateX },
+        { translateY: translate.beginningTransformations.translateY },
+        {
+          scale: menuScaleAnimation(),
+        },
+        { translateX: translate.endingTransformations.translateX },
+        { translateY: translate.endingTransformations.translateY },
+      ],
+    };
+  });
+
+  const animatedInnerContainerStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor:
+        theme.value === 'light'
+          ? IS_IOS
+            ? 'rgba(255, 255, 255, .75)'
+            : 'rgba(255, 255, 255, .95)'
+          : IS_IOS
+          ? 'rgba(0,0,0,0.5)'
+          : 'rgba(39, 39, 39, .8)',
+    };
+  }, [theme]);
+
+  const animatedProps = useAnimatedProps(() => {
+    return { tint: theme.value };
+  }, [theme]);
+
+  const setter = (items: MenuItemProps[]) => {
+    setItemList(items);
+    prevList.value = items;
+  };
 
   useAnimatedReaction(
-    React.useCallback(() => menuProps.value.items, [menuProps.value]),
+    () => menuProps.value.items,
     _items => {
       if (!deepEqual(_items, prevList.value)) {
         runOnJS(setter)(_items);
