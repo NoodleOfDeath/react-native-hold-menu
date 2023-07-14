@@ -1,4 +1,8 @@
-import React, { memo, useMemo } from 'react';
+import { 
+  memo, 
+  useCallback,
+  useMemo,
+} from 'react';
 import { ViewProps } from 'react-native';
 
 //#region reanimated & gesture handler
@@ -41,16 +45,17 @@ import {
   HOLD_ITEM_SCALE_DOWN_DURATION,
   HOLD_ITEM_SCALE_DOWN_VALUE,
   SPRING_CONFIGURATION,
-  WINDOW_HEIGHT,
-  WINDOW_WIDTH,
   CONTEXT_MENU_STATE,
 } from '../../constants';
-import { useDeviceOrientation } from '../../hooks';
+import { 
+  useDeviceOrientation,
+  useInternal, 
+  useStyleGuide,
+} from '../../hooks';
+  
 import styles from './styles';
-
 import type { HoldItemProps, GestureHandlerProps } from './types';
-import styleGuide from '../../styleGuide';
-import { useInternal } from '../../hooks';
+
 //#endregion
 
 type Context = { didMeasureLayout: boolean };
@@ -70,6 +75,7 @@ const HoldItemComponent = ({
 }: HoldItemProps) => {
   //#region hooks
   const { state, menuProps, safeAreaInsets } = useInternal();
+  const { dimensionWidth, dimensionHeight } = useStyleGuide();
   const deviceOrientation = useDeviceOrientation();
   //#endregion
 
@@ -94,7 +100,7 @@ const HoldItemComponent = ({
     return calculateMenuHeight(items.length, itemsWithSeparator.length);
   }, [items]);
 
-  const isHold = !activateOn || activateOn === 'hold';
+  const isHold = useMemo(() => !activateOn || activateOn === 'hold', [activateOn]);
   //#endregion
 
   //#region refs
@@ -102,7 +108,7 @@ const HoldItemComponent = ({
   //#endregion
 
   //#region functions
-  const hapticResponse = () => {
+  const hapticResponse = useCallback(() => {
     const style = !hapticFeedback ? 'Medium' : hapticFeedback;
     switch (style) {
       case `Selection`:
@@ -120,11 +126,11 @@ const HoldItemComponent = ({
         break;
       default:
     }
-  };
+  }, [hapticFeedback]);
   //#endregion
 
   //#region worklet functions
-  const activateAnimation = (ctx: any) => {
+  const activateAnimation = useCallback((ctx: any) => {
     'worklet';
     if (!ctx.didMeasureLayout) {
       const measured = measure(containerRef);
@@ -138,19 +144,19 @@ const HoldItemComponent = ({
         const position = getTransformOrigin(
           measured.pageX,
           itemRectWidth.value,
-          deviceOrientation === 'portrait' ? WINDOW_WIDTH : WINDOW_HEIGHT,
+          deviceOrientation === 'portrait' ? dimensionWidth : dimensionHeight,
           bottom
         );
         transformOrigin.value = position;
       }
     }
-  };
+  }, [dimensionWidth, dimensionHeight]);
 
-  const calculateTransformValue = () => {
+  const calculateTransformValue = useCallback(() => {
     'worklet';
 
     const height =
-      deviceOrientation === 'portrait' ? WINDOW_HEIGHT : WINDOW_WIDTH;
+      deviceOrientation === 'portrait' ? dimensionHeight : dimensionWidth;
 
     const isAnchorPointTop = transformOrigin.value.includes('top');
 
@@ -173,11 +179,10 @@ const HoldItemComponent = ({
       }
     }
     return tY;
-  };
+  }, [dimensionWidth, dimensionHeight]);
 
-  const setMenuProps = () => {
+  const setMenuProps = useCallback(() => {
     'worklet';
-
     menuProps.value = {
       itemHeight: itemRectHeight.value,
       itemWidth: itemRectWidth.value,
@@ -189,7 +194,7 @@ const HoldItemComponent = ({
       transformValue: transformValue.value,
       actionParams: actionParams || {},
     };
-  };
+  }, [item]);
 
   const scaleBack = () => {
     'worklet';
@@ -198,7 +203,7 @@ const HoldItemComponent = ({
     });
   };
 
-  const onCompletion = (isFinised?: boolean) => {
+  const onCompletion = useCallback((isFinised?: boolean) => {
     'worklet';
     const isListValid = items && items.length > 0;
     if (isFinised && isListValid) {
@@ -213,18 +218,18 @@ const HoldItemComponent = ({
     isAnimationStarted.value = false;
 
     // TODO: Warn user if item list is empty or not given
-  };
+  }, [hapticResponse]);
 
-  const scaleHold = () => {
+  const scaleHold = useCallback(() => {
     'worklet';
     itemScale.value = withTiming(
       HOLD_ITEM_SCALE_DOWN_VALUE,
       { duration: HOLD_ITEM_SCALE_DOWN_DURATION },
       onCompletion
     );
-  };
+  }, [onCompletion]);
 
-  const scaleTap = () => {
+  const scaleTap = useCallback(() => {
     'worklet';
     isAnimationStarted.value = true;
 
@@ -240,14 +245,14 @@ const HoldItemComponent = ({
         onCompletion
       )
     );
-  };
+  }, [onCompletion]);
 
   /**
    * When use tap activation ("tap") and trying to tap multiple times,
    * scale animation is called again despite it is started. This causes a bug.
    * To prevent this, it is better to check is animation already started.
    */
-  const canCallActivateFunctions = () => {
+  const canCallActivateFunctions = useCallback(() => {
     'worklet';
     const willActivateWithTap =
       activateOn === 'double-tap' || activateOn === 'tap';
@@ -255,7 +260,7 @@ const HoldItemComponent = ({
     return (
       (willActivateWithTap && !isAnimationStarted.value) || !willActivateWithTap
     );
-  };
+  }, [activateOn, isAnimationStarted.value]);
   //#endregion
 
   //#region gesture events
@@ -315,7 +320,7 @@ const HoldItemComponent = ({
       ],
     };
   });
-  const containerStyle = React.useMemo(
+  const containerStyle = useMemo(
     () => [containerStyles, animatedContainerStyle],
     [containerStyles, animatedContainerStyle]
   );

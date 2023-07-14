@@ -26,22 +26,12 @@ enum CONTEXT_MENU_STATE {
   END,
 }
 
-const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get('screen');
-
 const MENU_CONTAINER_WIDTH = 100;
-const MENU_WIDTH = (WINDOW_WIDTH * 60) / 100;
-
 const MENU_TRANSFORM_ORIGIN_TOLERENCE = 10;
-
 const IS_IOS = Platform.OS === 'ios';
-
-const FONT_SCALE = Dimensions.get('screen').fontScale;
 
 export {
   CONTEXT_MENU_STATE,
-  WINDOW_HEIGHT,
-  WINDOW_WIDTH,
-  MENU_WIDTH,
   MENU_CONTAINER_WIDTH,
   HOLD_ITEM_TRANSFORM_DURATION,
   HOLD_ITEM_SCALE_DOWN_VALUE,
@@ -50,5 +40,4 @@ export {
   SPRING_CONFIGURATION_MENU,
   MENU_TRANSFORM_ORIGIN_TOLERENCE,
   IS_IOS,
-  FONT_SCALE,
 };
