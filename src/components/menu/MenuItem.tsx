@@ -24,19 +24,24 @@ type MenuItemComponentProps = {
 const MenuItemComponent = ({ item, isLast }: MenuItemComponentProps) => {
   const { state, theme, menuProps } = useInternal();
 
-  const borderStyles = useAnimatedStyle(() => {
-    const borderBottomColor =
-      theme.value === 'dark' ? BORDER_DARK_COLOR : BORDER_LIGHT_COLOR;
+  const borderStyles = useAnimatedStyle(
+    useCallback(() => {
+      const borderBottomColor =
+        theme.value === 'dark' ? BORDER_DARK_COLOR : BORDER_LIGHT_COLOR;
+      return {
+        borderBottomColor,
+        borderBottomWidth: isLast ? 0 : 1,
+      };
+    }, [theme, isLast]),
+    [theme, isLast, item]
+  );
 
-    return {
-      borderBottomColor,
-      borderBottomWidth: isLast ? 0 : 1,
-    };
-  }, [theme, isLast, item]);
-
-  const textColor = useAnimatedStyle(() => {
-    return { color: getColor(item.isTitle, item.isDestructive, theme.value) };
-  }, [theme, item]);
+  const textColor = useAnimatedStyle(
+    useCallback(() => {
+      return { color: getColor(item.isTitle, item.isDestructive, theme.value) };
+    }, [theme, item]),
+    [theme, item]
+  );
 
   const handleOnPress = useCallback(() => {
     if (!item.isTitle) {
