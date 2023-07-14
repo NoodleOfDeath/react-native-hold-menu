@@ -1,6 +1,6 @@
+import React from 'react';
 import Animated from 'react-native-reanimated';
 
-import { MENU_WIDTH } from '../../constants';
 import {
   MENU_TEXT_DARK_COLOR,
   MENU_TEXT_DESTRUCTIVE_COLOR_DARK,
@@ -8,26 +8,32 @@ import {
   MENU_TEXT_LIGHT_COLOR,
   MENU_TITLE_COLOR,
 } from './constants';
+import { useStyleGuide } from '../../hooks/useStyleGuide';
 import type { MenuInternalProps } from './types';
 
-export const leftOrRight = (
+export const useLeftOrRight = (
   menuProps: Animated.SharedValue<MenuInternalProps>
 ) => {
   'worklet';
-
-  const anchorPositionHorizontal = menuProps.value.anchorPosition.split('-')[1];
-  const itemWidth = menuProps.value.itemWidth;
-
-  let leftPosition = 0;
-  anchorPositionHorizontal === 'right'
-    ? (leftPosition = -MENU_WIDTH + itemWidth)
-    : anchorPositionHorizontal === 'left'
-    ? (leftPosition = 0)
-    : (leftPosition =
-        -menuProps.value.itemWidth -
-        MENU_WIDTH / 2 +
-        menuProps.value.itemWidth / 2);
-
+  const { menuWidth } = useStyleGuide();
+  const anchorPositionHorizontal = React.useMemo(
+    () => menuProps.value.anchorPosition.split('-')[1],
+    [menuProps.value.anchorPosition]
+  );
+  const itemWidth = React.useMemo(() => menuProps.value.itemWidth, [
+    menuProps.value.itemWidth,
+  ]);
+  const leftPosition = React.useMemo(
+    () =>
+      anchorPositionHorizontal === 'right'
+        ? menuWidth + itemWidth
+        : anchorPositionHorizontal === 'left'
+        ? 0
+        : -menuProps.value.itemWidth -
+          menuWidth / 2 +
+          menuProps.value.itemWidth / 2,
+    [anchorPositionHorizontal, itemWidth, menuProps.value.itemWidth, menuWidth]
+  );
   return leftPosition;
 };
 

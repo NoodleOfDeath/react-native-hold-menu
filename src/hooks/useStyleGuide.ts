@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 
-WINDOW_HEIGHT,
-  WINDOW_WIDTH,
-  MENU_WIDTH,
-  FONT_SCALE,
+type Orientation = 'landscape' | 'portrait';
 
-const useStyleGuide = () => {
+export const useStyleGuide = () => {
   const { width, height, fontScale } = useWindowDimensions();
   const guide = useMemo(() => ({
     spacing: 8,
@@ -14,6 +11,7 @@ const useStyleGuide = () => {
     dimensionHeight: height,
     fontScale,
     menuWidth: (width * 60) / 100,
+    orientation: (height >= width ? 'portrait' : 'landscape') as Orientation,
     palette: {
       primary: '#0072ff',
       secondary: '#e2e2e2',
@@ -36,6 +34,6 @@ const useStyleGuide = () => {
         lineHeight: 18,
       },
     },
-  });
+  }), [width, height, fontScale]);
   return guide;
 }

@@ -21,13 +21,12 @@ import {
   CONTEXT_MENU_STATE,
   HOLD_ITEM_TRANSFORM_DURATION,
   IS_IOS,
-  WINDOW_HEIGHT,
 } from '../../constants';
 import {
   BACKDROP_LIGHT_BACKGROUND_COLOR,
   BACKDROP_DARK_BACKGROUND_COLOR,
 } from './constants';
-import { useInternal } from '../../hooks';
+import { useInternal, useStyleGuide } from '../../hooks';
 
 const AnimatedBlurView = IS_IOS
   ? Animated.createAnimatedComponent(BlurView)
@@ -42,6 +41,7 @@ type Context = {
 
 const BackdropComponent = () => {
   const { state, theme } = useInternal();
+  const { dimensionWidth: WINDOW_HEIGHT } = useStyleGuide();
 
   const tapGestureEvent = useAnimatedGestureHandler<
     TapGestureHandlerGestureEvent,

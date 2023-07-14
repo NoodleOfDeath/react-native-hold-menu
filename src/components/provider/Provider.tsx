@@ -1,6 +1,10 @@
 import React, { memo, useEffect, useMemo } from 'react';
 import { PortalProvider } from '@gorhom/portal';
-import Animated, { useSharedValue, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedReaction,
+  runOnJS,
+} from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Components
@@ -55,17 +59,15 @@ const ProviderComponent = ({
 
   useAnimatedReaction(
     () => state.value,
-    state => {
-      switch (state) {
+    _state => {
+      switch (_state) {
         case CONTEXT_MENU_STATE.ACTIVE: {
-          if (onOpen)
-            runOnJS(onOpen)();
-          break
+          if (onOpen) runOnJS(onOpen)();
+          break;
         }
         case CONTEXT_MENU_STATE.END: {
-          if (onClose)
-            runOnJS(onClose)();
-          break
+          if (onClose) runOnJS(onClose)();
+          break;
         }
       }
     },

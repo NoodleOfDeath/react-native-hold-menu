@@ -1,8 +1,4 @@
-import { 
-  memo, 
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { ViewProps } from 'react-native';
 
 //#region reanimated & gesture handler
@@ -37,9 +33,8 @@ import * as Haptics from 'expo-haptics';
 //#region utils & types
 import {
   TransformOriginAnchorPosition,
-  getTransformOrigin,
-  calculateMenuHeight,
-} from '../../utils/calculations';
+  useCalculations,
+} from '../../hooks/useCalculations';
 import {
   HOLD_ITEM_TRANSFORM_DURATION,
   HOLD_ITEM_SCALE_DOWN_DURATION,
@@ -47,12 +42,8 @@ import {
   SPRING_CONFIGURATION,
   CONTEXT_MENU_STATE,
 } from '../../constants';
-import { 
-  useDeviceOrientation,
-  useInternal, 
-  useStyleGuide,
-} from '../../hooks';
-  
+import { useInternal, useStyleGuide } from '../../hooks';
+
 import styles from './styles';
 import type { HoldItemProps, GestureHandlerProps } from './types';
 
@@ -75,8 +66,13 @@ const HoldItemComponent = ({
 }: HoldItemProps) => {
   //#region hooks
   const { state, menuProps, safeAreaInsets } = useInternal();
-  const { dimensionWidth, dimensionHeight } = useStyleGuide();
-  const deviceOrientation = useDeviceOrientation();
+  const {
+    orientation: deviceOrientation,
+    dimensionWidth,
+    dimensionHeight,
+    spacing,
+  } = useStyleGuide();
+  const { calculateMenuHeight, getTransformOrigin } = useCalculations();
   //#endregion
 
   //#region variables
@@ -98,9 +94,11 @@ const HoldItemComponent = ({
   const menuHeight = useMemo(() => {
     const itemsWithSeparator = items.filter(item => item.withSeparator);
     return calculateMenuHeight(items.length, itemsWithSeparator.length);
-  }, [items]);
+  }, [calculateMenuHeight, items]);
 
-  const isHold = useMemo(() => !activateOn || activateOn === 'hold', [activateOn]);
+  const isHold = useMemo(() => !activateOn || activateOn === 'hold', [
+    activateOn,
+  ]);
   //#endregion
 
   //#region refs
@@ -130,27 +128,43 @@ const HoldItemComponent = ({
   //#endregion
 
   //#region worklet functions
-  const activateAnimation = useCallback((ctx: any) => {
-    'worklet';
-    if (!ctx.didMeasureLayout) {
-      const measured = measure(containerRef);
+  const activateAnimation = useCallback(
+    (ctx: any) => {
+      'worklet';
+      if (!ctx.didMeasureLayout) {
+        const measured = measure(containerRef);
 
-      itemRectY.value = measured.pageY;
-      itemRectX.value = measured.pageX;
-      itemRectHeight.value = measured.height;
-      itemRectWidth.value = measured.width;
+        itemRectY.value = measured.pageY;
+        itemRectX.value = measured.pageX;
+        itemRectHeight.value = measured.height;
+        itemRectWidth.value = measured.width;
 
-      if (!menuAnchorPosition) {
-        const position = getTransformOrigin(
-          measured.pageX,
-          itemRectWidth.value,
-          deviceOrientation === 'portrait' ? dimensionWidth : dimensionHeight,
-          bottom
-        );
-        transformOrigin.value = position;
+        if (!menuAnchorPosition) {
+          const position = getTransformOrigin(
+            measured.pageX,
+            itemRectWidth.value,
+            deviceOrientation === 'portrait' ? dimensionWidth : dimensionHeight,
+            bottom
+          );
+          transformOrigin.value = position;
+        }
       }
-    }
-  }, [dimensionWidth, dimensionHeight]);
+    },
+    [
+      containerRef,
+      itemRectY,
+      itemRectX,
+      itemRectHeight,
+      itemRectWidth,
+      menuAnchorPosition,
+      getTransformOrigin,
+      deviceOrientation,
+      dimensionWidth,
+      dimensionHeight,
+      bottom,
+      transformOrigin,
+    ]
+  );
 
   const calculateTransformValue = useCallback(() => {
     'worklet';
@@ -167,19 +181,30 @@ const HoldItemComponent = ({
           itemRectY.value +
           itemRectHeight.value +
           menuHeight +
-          styleGuide.spacing +
+          spacing +
           (safeAreaInsets?.bottom || 0);
 
         tY = topTransform > height ? height - topTransform : 0;
       } else {
         const bottomTransform =
           itemRectY.value - menuHeight - (safeAreaInsets?.top || 0);
-        tY =
-          bottomTransform < 0 ? -bottomTransform + styleGuide.spacing * 2 : 0;
+        tY = bottomTransform < 0 ? -bottomTransform + spacing * 2 : 0;
       }
     }
     return tY;
-  }, [dimensionWidth, dimensionHeight]);
+  }, [
+    deviceOrientation,
+    dimensionHeight,
+    dimensionWidth,
+    transformOrigin.value,
+    disableMove,
+    itemRectY.value,
+    itemRectHeight.value,
+    menuHeight,
+    spacing,
+    safeAreaInsets?.bottom,
+    safeAreaInsets?.top,
+  ]);
 
   const setMenuProps = useCallback(() => {
     'worklet';
@@ -194,31 +219,53 @@ const HoldItemComponent = ({
       transformValue: transformValue.value,
       actionParams: actionParams || {},
     };
-  }, [item]);
+  }, [
+    actionParams,
+    itemRectHeight.value,
+    itemRectWidth.value,
+    itemRectX.value,
+    itemRectY.value,
+    items,
+    menuHeight,
+    menuProps,
+    transformOrigin.value,
+    transformValue.value,
+  ]);
 
-  const scaleBack = () => {
+  const scaleBack = useCallback(() => {
     'worklet';
     itemScale.value = withTiming(1, {
       duration: HOLD_ITEM_TRANSFORM_DURATION / 2,
     });
-  };
+  }, [itemScale]);
 
-  const onCompletion = useCallback((isFinised?: boolean) => {
-    'worklet';
-    const isListValid = items && items.length > 0;
-    if (isFinised && isListValid) {
-      state.value = CONTEXT_MENU_STATE.ACTIVE;
-      isActive.value = true;
-      scaleBack();
-      if (hapticFeedback !== 'None') {
-        runOnJS(hapticResponse)();
+  const onCompletion = useCallback(
+    (isFinised?: boolean) => {
+      'worklet';
+      const isListValid = items && items.length > 0;
+      if (isFinised && isListValid) {
+        state.value = CONTEXT_MENU_STATE.ACTIVE;
+        isActive.value = true;
+        scaleBack();
+        if (hapticFeedback !== 'None') {
+          runOnJS(hapticResponse)();
+        }
       }
-    }
 
-    isAnimationStarted.value = false;
+      isAnimationStarted.value = false;
 
-    // TODO: Warn user if item list is empty or not given
-  }, [hapticResponse]);
+      // TODO: Warn user if item list is empty or not given
+    },
+    [
+      hapticFeedback,
+      hapticResponse,
+      isActive,
+      isAnimationStarted,
+      items,
+      scaleBack,
+      state,
+    ]
+  );
 
   const scaleHold = useCallback(() => {
     'worklet';
@@ -227,7 +274,7 @@ const HoldItemComponent = ({
       { duration: HOLD_ITEM_SCALE_DOWN_DURATION },
       onCompletion
     );
-  }, [onCompletion]);
+  }, [itemScale, onCompletion]);
 
   const scaleTap = useCallback(() => {
     'worklet';
@@ -245,7 +292,7 @@ const HoldItemComponent = ({
         onCompletion
       )
     );
-  }, [onCompletion]);
+  }, [isAnimationStarted, itemScale, onCompletion]);
 
   /**
    * When use tap activation ("tap") and trying to tap multiple times,
@@ -410,7 +457,7 @@ const HoldItemComponent = ({
           </LongPressGestureHandler>
         );
     }
-  }, [activateOn, gestureEvent]);
+  }, [activateOn, gestureEvent, longPressMinDurationMs]);
 
   const PortalOverlay = useMemo(() => {
     return () => (

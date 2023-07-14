@@ -20,13 +20,11 @@ const Icon = ({ iconComponent, name }: IconProps) => {
   let AnimatedIcon = Animated.createAnimatedComponent<IconComponentProps>(
     iconComponent
   );
-
   const iconProps = useAnimatedProps(() => {
     return {
       color: theme.value === 'light' ? 'black' : 'white',
     };
   }, [theme]);
-
   return <AnimatedIcon name={name} size={18} animatedProps={iconProps} />;
 };
 
